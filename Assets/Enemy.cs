@@ -8,17 +8,35 @@ public class Enemy : MonoBehaviour
     [SerializeField] protected float speed;
     [SerializeField] protected PlayerController player;
     [SerializeField] protected float damage;
+    private PointManager pointManager;
 
     // Start is called before the first frame update
     protected virtual void Start()
     {
-
+        // Verifica se o PointManager existe antes de atribuir
+        GameObject pointManagerObj = GameObject.Find("PointManager");
+        if (pointManagerObj != null)
+        {
+            pointManager = pointManagerObj.GetComponent<PointManager>();
+        }
+        else
+        {
+            Debug.LogError("GameObject 'PointManager' não encontrado na cena!");
+        }
     }
     // Update is called once per frame
     protected virtual void Update()
     {
         if (health <= 0)
         {
+            if (pointManager != null)
+            {
+                pointManager.UpdateScore(200); // Adiciona pontos
+            }
+            else
+            {
+                Debug.LogWarning("PointManager não atribuído!");
+            }
             Destroy(gameObject);
         }
     }

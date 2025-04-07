@@ -20,6 +20,8 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private Animator anim;
     [HideInInspector] public PlayerStateList pState;
+    public GameObject gameOver;
+    private PointManager pointManager;
 
     [Header("Attack Settings:")]
     [SerializeField] private Transform SideAttackTransform; //the middle of the side attack area
@@ -33,6 +35,8 @@ public class PlayerController : MonoBehaviour
     [Header("Health Settings")]
     public int health;
     public int maxHealth;
+    public delegate void OnHealthChangedDelegate();
+    [HideInInspector] public OnHealthChangedDelegate onHealthChangedCallback;
 
     public static PlayerController Instance;
 
@@ -55,6 +59,12 @@ public class PlayerController : MonoBehaviour
         pState = GetComponent<PlayerStateList>();
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
+
+        GameObject pointManagerObj = GameObject.Find("PointManager");
+        if (pointManagerObj != null)
+        {
+            pointManager = pointManagerObj.GetComponent<PointManager>();
+        }
     }
 
     private void OnDrawGizmos()
@@ -131,10 +141,6 @@ public class PlayerController : MonoBehaviour
     {
         Collider2D[] objectsToHit = Physics2D.OverlapBoxAll(_attackTransform.position, _attackArea, 0, attackableLayer);
 
-        if(objectsToHit.Length > 0)
-        {
-            Debug.Log("Hit");
-        }
 
         List<Enemy> hitEnemies = new List<Enemy>();
 
@@ -151,8 +157,18 @@ public class PlayerController : MonoBehaviour
 
     public void TakeDamage(float _damage)
     {
-        health -= Mathf.RoundToInt(_damage);
+        Health -= Mathf.RoundToInt(_damage);
         StartCoroutine(StopTakingDamage());
+
+    }
+
+    void ShowGameOver()
+    {
+        if (gameOver != null)
+        {
+            gameOver.SetActive(true); // Ativa a tela de Game Over
+            Time.timeScale = 0f; // Pausa o jogo
+        }
     }
 
     IEnumerator StopTakingDamage()
@@ -169,6 +185,28 @@ public class PlayerController : MonoBehaviour
         health = Mathf.Clamp(health, 0, maxHealth);
     }
 
+    public int Health
+    {
+        get { return health; }
+        set
+        {
+            if (health != value)
+            {
+                health = Mathf.Clamp(value, 0, maxHealth);
+
+
+                if (onHealthChangedCallback != null)
+                {
+                    onHealthChangedCallback.Invoke();
+                }
+            }
+            if (health == 0)
+            {
+                ShowGameOver();
+            }
+        }
+    }
+
     void Jump()
     {
 
@@ -183,5 +221,20 @@ public class PlayerController : MonoBehaviour
         }
 
         anim.SetBool("Jumping", !Grounded());
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Item"))
+        {
+            // Destroi o item
+            Destroy(collision.gameObject);
+
+            // Adiciona pontos (você precisará acessar o PointManager)
+            if (pointManager != null)
+            {
+                pointManager.UpdateScore(100);
+            }
+        }
     }
 }
